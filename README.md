@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 <!-- SPDX-License-Identifier: GPL-2.0-only -->
 
 # Linux / Unix 常用命令速记
@@ -47,3 +48,8 @@
 ## 想一起补内容？
 
 看 [CONTRIBUTING.md](CONTRIBUTING.md)。最欢迎的是你把**自己踩过的坑**补成一条示例或一道练习。
+=======
+# linux-learning
+
+Linux Learning 是一份面向初学者的命令行速查手册，包含常用命令说明、实战练习和自动化脚本，帮助你快速掌握终端操作。
+>>>>>>> origin/main
