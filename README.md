@@ -1,5 +1,5 @@
 <<<<<<< HEAD
-<!-- SPDX-License-Identifier: GPL-2.0-only -->
+<!-- SPDX-License-Identifier: MIT -->
 
 # Linux / Unix 常用命令速记
 
