@@ -1,0 +1,730 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>📄 Markdown 文件查看器</title>
+
+    <!-- marked.js 轻量级 Markdown 解析库 -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js">
+    </script>
+    <!-- highlight.js 代码高亮 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js">
+    </script>
+
+    <style>
+        /* ---------- 全局重置 & 字体 ---------- */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+                "Helvetica Neue", Arial, "Noto Sans SC", sans-serif;
+            background: #f5f7fb;
+            color: #1e293b;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 24px 16px 40px;
+        }
+
+        /* ---------- 主容器 ---------- */
+        .app-wrapper {
+            max-width: 960px;
+            width: 100%;
+            background: #ffffff;
+            border-radius: 20px;
+            box-shadow: 0 12px 48px rgba(0, 0, 0, 0.08);
+            overflow: hidden;
+            transition: box-shadow 0.25s;
+        }
+
+        .app-wrapper:hover {
+            box-shadow: 0 18px 56px rgba(0, 0, 0, 0.10);
+        }
+
+        /* ---------- 头部 ---------- */
+        .header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 14px;
+            padding: 22px 28px;
+            background: #ffffff;
+            border-bottom: 1px solid #edf2f7;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .logo-icon {
+            font-size: 28px;
+            line-height: 1;
+        }
+
+        .header-title {
+            font-size: 20px;
+            font-weight: 700;
+            letter-spacing: -0.3px;
+            color: #0f172a;
+        }
+
+        .header-title span {
+            color: #6366f1;
+        }
+
+        .file-info {
+            font-size: 13px;
+            color: #64748b;
+            background: #f1f5f9;
+            padding: 4px 14px;
+            border-radius: 30px;
+            white-space: nowrap;
+            max-width: 200px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        /* ---------- 工具栏 ---------- */
+        .toolbar {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 18px;
+            border: none;
+            border-radius: 50px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            background: #f1f5f9;
+            color: #334155;
+        }
+
+        .btn:hover {
+            background: #e2e8f0;
+            transform: translateY(-1px);
+        }
+
+        .btn-primary {
+            background: #6366f1;
+            color: #fff;
+        }
+
+        .btn-primary:hover {
+            background: #4f46e5;
+            box-shadow: 0 4px 14px rgba(99, 102, 241, 0.35);
+        }
+
+        .btn-outline {
+            background: transparent;
+            border: 1.5px solid #cbd5e1;
+        }
+
+        .btn-outline:hover {
+            border-color: #6366f1;
+            color: #6366f1;
+            background: rgba(99, 102, 241, 0.04);
+        }
+
+        .btn svg {
+            width: 18px;
+            height: 18px;
+            fill: none;
+            stroke: currentColor;
+            stroke-width: 2;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+
+        /* ---------- 内容区 ---------- */
+        .content-area {
+            padding: 32px 36px;
+            min-height: 480px;
+        }
+
+        /* ---------- 空状态 ---------- */
+        .empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 64px 20px;
+            text-align: center;
+            color: #94a3b8;
+        }
+
+        .empty-state .icon-big {
+            font-size: 72px;
+            opacity: 0.5;
+            margin-bottom: 16px;
+        }
+
+        .empty-state h3 {
+            font-size: 18px;
+            font-weight: 600;
+            color: #475569;
+            margin-bottom: 6px;
+        }
+
+        .empty-state p {
+            font-size: 15px;
+            max-width: 360px;
+            line-height: 1.6;
+        }
+
+        .empty-state .btn {
+            margin-top: 20px;
+        }
+
+        /* ---------- Markdown 渲染区 ---------- */
+        .markdown-body {
+            word-wrap: break-word;
+            line-height: 1.75;
+            font-size: 16px;
+        }
+
+        /* 借用 GitHub 风格的部分样式，简单又干净 */
+        .markdown-body h1,
+        .markdown-body h2,
+        .markdown-body h3,
+        .markdown-body h4,
+        .markdown-body h5,
+        .markdown-body h6 {
+            margin-top: 1.4em;
+            margin-bottom: 0.6em;
+            font-weight: 650;
+            color: #0f172a;
+            letter-spacing: -0.02em;
+        }
+
+        .markdown-body h1 {
+            font-size: 2em;
+            border-bottom: 2px solid #eef2f6;
+            padding-bottom: 0.3em;
+        }
+        .markdown-body h2 {
+            font-size: 1.55em;
+            border-bottom: 1px solid #eef2f6;
+            padding-bottom: 0.2em;
+        }
+        .markdown-body h3 {
+            font-size: 1.25em;
+        }
+        .markdown-body h4 {
+            font-size: 1.05em;
+        }
+
+        .markdown-body p {
+            margin: 0 0 1em 0;
+        }
+
+        .markdown-body a {
+            color: #6366f1;
+            text-decoration: none;
+            border-bottom: 1px solid transparent;
+            transition: border-color 0.2s;
+        }
+
+        .markdown-body a:hover {
+            border-bottom-color: #6366f1;
+        }
+
+        .markdown-body ul,
+        .markdown-body ol {
+            margin: 0.5em 0 1em 1.8em;
+        }
+
+        .markdown-body li {
+            margin-bottom: 0.3em;
+        }
+
+        .markdown-body blockquote {
+            margin: 1em 0;
+            padding: 0.6em 1.2em;
+            border-left: 4px solid #6366f1;
+            background: #f8fafc;
+            border-radius: 0 8px 8px 0;
+            color: #334155;
+        }
+
+        .markdown-body code {
+            background: #f1f5f9;
+            padding: 2px 8px;
+            border-radius: 6px;
+            font-size: 0.88em;
+            font-family: "JetBrains Mono", "Fira Code", monospace;
+            color: #1e293b;
+        }
+
+        .markdown-body pre {
+            background: #0f172a;
+            border-radius: 12px;
+            padding: 18px 20px;
+            overflow-x: auto;
+            margin: 1.2em 0;
+            border: 1px solid #1e293b;
+        }
+
+        .markdown-body pre code {
+            background: transparent;
+            padding: 0;
+            color: #e2e8f0;
+            font-size: 0.85em;
+            line-height: 1.65;
+        }
+
+        .markdown-body img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 12px;
+            margin: 1em 0;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+        }
+
+        .markdown-body table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1em 0;
+            font-size: 0.95em;
+        }
+
+        .markdown-body th,
+        .markdown-body td {
+            border: 1px solid #e2e8f0;
+            padding: 10px 14px;
+            text-align: left;
+        }
+
+        .markdown-body th {
+            background: #f8fafc;
+            font-weight: 600;
+        }
+
+        .markdown-body hr {
+            border: none;
+            border-top: 2px solid #eef2f6;
+            margin: 2em 0;
+        }
+
+        .markdown-body .hljs {
+            background: transparent;
+            padding: 0;
+        }
+
+        /* ---------- 底部状态 ---------- */
+        .footer-bar {
+            padding: 14px 28px;
+            border-top: 1px solid #edf2f7;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 8px;
+            font-size: 13px;
+            color: #94a3b8;
+            background: #fafbfc;
+        }
+
+        .footer-bar .status-dot {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #22c55e;
+            margin-right: 6px;
+        }
+
+        /* ---------- 响应式 ---------- */
+        @media (max-width: 640px) {
+            body {
+                padding: 12px 8px 24px;
+            }
+
+            .header {
+                padding: 16px 18px;
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .header-left {
+                justify-content: center;
+            }
+
+            .toolbar {
+                justify-content: center;
+            }
+
+            .content-area {
+                padding: 20px 16px;
+                min-height: 320px;
+            }
+
+            .markdown-body {
+                font-size: 15px;
+            }
+
+            .footer-bar {
+                flex-direction: column;
+                text-align: center;
+                padding: 12px 16px;
+            }
+
+            .file-info {
+                max-width: 140px;
+                font-size: 12px;
+            }
+        }
+
+        /* ---------- 滚动条美化 ---------- */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 12px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+
+        /* ---------- 拖入高亮 ---------- */
+        .drag-over {
+            outline: 3px dashed #6366f1;
+            outline-offset: -3px;
+            background: rgba(99, 102, 241, 0.03);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="app-wrapper" id="appWrapper">
+
+        <!-- ===== 头部 ===== -->
+        <header class="header">
+            <div class="header-left">
+                <span class="logo-icon">📘</span>
+                <h1 class="header-title">MD <span>Viewer</span></h1>
+                <span class="file-info" id="fileInfo">未打开文件</span>
+            </div>
+            <div class="toolbar">
+                <!-- 隐藏 file input -->
+                <input type="file" id="fileInput" accept=".md,.markdown,text/markdown" style="display:none;" />
+
+                <button class="btn btn-primary" id="openBtn">
+                    <svg viewBox="0 0 24 24"><path d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/></svg>
+                    打开文件
+                </button>
+
+                <button class="btn btn-outline" id="sampleBtn">
+                    <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+                    示例文档
+                </button>
+
+                <button class="btn btn-outline" id="clearBtn">
+                    <svg viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                    清空
+                </button>
+            </div>
+        </header>
+
+        <!-- ===== 内容区 ===== -->
+        <div class="content-area" id="contentArea">
+            <!-- 空状态 -->
+            <div class="empty-state" id="emptyState">
+                <div class="icon-big">📂</div>
+                <h3>拖入或打开 Markdown 文件</h3>
+                <p>支持 <code>.md</code> / <code>.markdown</code> 格式，点击上方按钮或直接拖拽文件到此处。</p>
+                <button class="btn btn-primary" id="emptyOpenBtn">选择文件</button>
+            </div>
+
+            <!-- Markdown 渲染结果 -->
+            <div class="markdown-body" id="markdownOutput" style="display:none;"></div>
+        </div>
+
+        <!-- ===== 底部 ===== -->
+        <footer class="footer-bar">
+            <span>
+                <span class="status-dot"></span> 就绪
+            </span>
+            <span id="wordCount">字符数：0</span>
+        </footer>
+    </div>
+
+    <script>
+        (function() {
+            'use strict';
+
+            // ---------- DOM 引用 ----------
+            const fileInput = document.getElementById('fileInput');
+            const openBtn = document.getElementById('openBtn');
+            const emptyOpenBtn = document.getElementById('emptyOpenBtn');
+            const sampleBtn = document.getElementById('sampleBtn');
+            const clearBtn = document.getElementById('clearBtn');
+            const fileInfo = document.getElementById('fileInfo');
+            const emptyState = document.getElementById('emptyState');
+            const markdownOutput = document.getElementById('markdownOutput');
+            const wordCount = document.getElementById('wordCount');
+            const appWrapper = document.getElementById('appWrapper');
+
+            let currentFileName = null; // 记录当前文件名
+
+            // ---------- marked 配置 ----------
+            marked.setOptions({
+                breaks: true, // 支持回车换行
+                gfm: true, // GitHub 风格
+                highlight: function(code, lang) {
+                    if (lang && hljs.getLanguage(lang)) {
+                        try {
+                            return hljs.highlight(code, { language: lang }).value;
+                        } catch (_) { /* fallback */ }
+                    }
+                    // 自动检测
+                    try {
+                        return hljs.highlightAuto(code).value;
+                    } catch (_) {
+                        return code;
+                    }
+                }
+            });
+
+            // ---------- 辅助函数 ----------
+            function showError(msg) {
+                markdownOutput.innerHTML =
+                    `<div style="color:#dc2626;padding:1.2em;background:#fef2f2;border-radius:12px;">❌ ${msg}</div>`;
+                markdownOutput.style.display = 'block';
+                emptyState.style.display = 'none';
+                wordCount.textContent = '渲染出错';
+            }
+
+            function renderMarkdown(text, fileName) {
+                try {
+                    const html = marked.parse(text);
+                    markdownOutput.innerHTML = html;
+                    markdownOutput.style.display = 'block';
+                    emptyState.style.display = 'none';
+
+                    // 更新文件信息
+                    currentFileName = fileName || '未知文件';
+                    fileInfo.textContent = currentFileName;
+
+                    // 字数统计
+                    const raw = text.replace(/\s+/g, ' ');
+                    const chars = raw.length;
+                    const lines = text.split('\n').length;
+                    wordCount.textContent = `${chars} 字符 · ${lines} 行`;
+
+                    // 高亮所有代码块
+                    markdownOutput.querySelectorAll('pre code').forEach((block) => {
+                        hljs.highlightElement(block);
+                    });
+                } catch (err) {
+                    showError('Markdown 解析失败：' + err.message);
+                }
+            }
+
+            function loadFile(file) {
+                // 校验类型
+                const validExt = ['.md', '.markdown'];
+                const ext = '.' + file.name.split('.').pop().toLowerCase();
+                if (!validExt.includes(ext) && file.type !== 'text/markdown') {
+                    // 仍尝试读取，但提示
+                    console.warn('非标准 Markdown 文件，尝试加载…');
+                }
+
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const text = e.target.result;
+                    renderMarkdown(text, file.name);
+                };
+                reader.onerror = function() {
+                    showError('文件读取失败，请重试。');
+                };
+                reader.readAsText(file, 'UTF-8');
+            }
+
+            // ---------- 打开文件对话框 ----------
+            function triggerFilePicker() {
+                fileInput.value = ''; // 重置以便重复选同一文件
+                fileInput.click();
+            }
+
+            openBtn.addEventListener('click', triggerFilePicker);
+            emptyOpenBtn.addEventListener('click', triggerFilePicker);
+
+            fileInput.addEventListener('change', function(e) {
+                const file = e.target.files[0];
+                if (file) {
+                    loadFile(file);
+                }
+            });
+
+            // ---------- 示例文档 ----------
+            sampleBtn.addEventListener('click', function() {
+                const sampleMD =
+                    `# 🚀 欢迎使用 MD Viewer
+
+这是一份 **示例文档**，展示了本查看器支持的常用 Markdown 语法。
+
+---
+
+## 📝 文本样式
+
+普通文字，**加粗**，*斜体*，~~删除线~~，\`行内代码\`，[链接到 GitHub](https://github.com)。
+
+> 💡 “好的代码本身就是最好的文档。” —— 佚名
+
+---
+
+## 📋 列表
+
+### 无序列表
+- 简洁清晰
+- 零依赖核心
+- 支持代码高亮
+
+### 有序列表
+1. 打开 \`.md\` 文件
+2. 自动渲染为精美排版
+3. 享受阅读
+
+---
+
+## 🔧 代码块
+
+\`\`\`javascript
+// 一个简单的问候函数
+function greet(name) {
+  return \`你好，\${name}！欢迎使用 MD Viewer。\`;
+}
+console.log(greet('元宝'));
+\`\`\`
+
+\`\`\`python
+# Python 示例
+def fibonacci(n):
+    a, b = 0, 1
+    for _ in range(n):
+        yield a
+        a, b = b, a + b
+
+print(list(fibonacci(10)))
+\`\`\`
+
+\`\`\`bash
+# 一行命令
+echo "Hello from MD Viewer ✨"
+\`\`\`
+
+---
+
+## 📊 表格
+
+| 功能         | 支持情况 | 说明                 |
+|--------------|----------|----------------------|
+| 标题 / 段落  | ✅       | 标准 GFM             |
+| 代码高亮     | ✅       | 基于 highlight.js    |
+| 图片显示     | ✅       | 自动缩放             |
+| 任务列表     | ✅       | - [x] 已完成         |
+| 数学公式     | ❌       | 可自行扩展           |
+
+---
+
+## 🖼️ 图片（占位）
+
+![示例图片](https://placehold.co/800x240/6366f1/ffffff?text=MD+Viewer+Demo)
+
+---
+
+## ✅ 任务列表
+
+- [x] 完成基础渲染
+- [x] 代码高亮
+- [ ] 添加暗色主题（计划中）
+- [ ] 导出 PDF
+
+---
+
+> 由 **MD Viewer** 强力驱动 · 愉快写作 🎉
+`;
+
+                renderMarkdown(sampleMD, '示例文档.md');
+            });
+
+            // ---------- 清空 ----------
+            clearBtn.addEventListener('click', function() {
+                markdownOutput.style.display = 'none';
+                markdownOutput.innerHTML = '';
+                emptyState.style.display = 'flex';
+                fileInfo.textContent = '未打开文件';
+                wordCount.textContent = '字符数：0';
+                currentFileName = null;
+            });
+
+            // ---------- 拖拽支持 ----------
+            appWrapper.addEventListener('dragover', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                appWrapper.classList.add('drag-over');
+            });
+
+            appWrapper.addEventListener('dragleave', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                appWrapper.classList.remove('drag-over');
+            });
+
+            appWrapper.addEventListener('drop', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                appWrapper.classList.remove('drag-over');
+
+                const files = e.dataTransfer.files;
+                if (files.length > 0) {
+                    const file = files[0];
+                    const ext = '.' + file.name.split('.').pop().toLowerCase();
+                    if (ext === '.md' || ext === '.markdown' || file.type === 'text/markdown') {
+                        loadFile(file);
+                    } else {
+                        showError('请拖入 .md 或 .markdown 文件。');
+                    }
+                }
+            });
+
+            // 阻止页面级默认拖拽行为
+            document.addEventListener('dragover', function(e) { e.preventDefault(); });
+            document.addEventListener('drop', function(e) { e.preventDefault(); });
+
+            // ---------- 初始化：自动加载一次示例（可选） ----------
+            // 如果想首次打开看到示例，取消注释下一行：
+            // sampleBtn.click();
+
+            console.log('📘 MD Viewer 已启动 — 拖拽或打开 .md 文件即可预览');
+        })();
+    </script>
+<p>这个项目为linux-learning开发 因为linux-learning是纯md文档。当然你可以上传其他项目的README.md</p>
+</body>
+</html>
